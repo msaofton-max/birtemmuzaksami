@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Bir dakikan var mı?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EFEAE1;
+    --paper-deep: #E4DDCF;
+    --ink: #211D18;
+    --ink-soft: #56503f;
+    --sun: #C1531B;
+    --sun-soft: rgba(193,83,27,0.12);
+    --shadow: #33495A;
+    --line: #C9BEAC;
+    --display: 'Instrument Serif', serif;
+    --body-font: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body{
+    margin:0; padding:0; height:100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body-font);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body{
+    position: relative;
+    height: 100vh;
+    height: 100dvh;
+    width: 100%;
+  }
+
+  /* ambient signature: a slow-turning wedge of shadow, like a sundial through a lunch hour */
+  .gnomon{
+    position: fixed;
+    top: -40vh; left: 50%;
+    width: 220vh; height: 220vh;
+    transform-origin: 50% 100%;
+    transform: translateX(-50%) rotate(0deg);
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(51,73,90,0.07) 6deg, transparent 14deg);
+    pointer-events: none;
+    z-index: 0;
+    animation: sweep 90s linear infinite;
+    mix-blend-mode: multiply;
+  }
+  @keyframes sweep{ to{ transform: translateX(-50%) rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce){ .gnomon{ animation: none; } }
+
+  .stage{
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    width: 100%;
+  }
+
+  .screen{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: max(28px, env(safe-area-inset-top)) 26px max(24px, env(safe-area-inset-bottom));
+    opacity: 0;
+    transform: translateY(14px);
+    pointer-events: none;
+    transition: opacity .45s ease, transform .45s ease;
+  }
+  .screen.active{
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .eyebrow{
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .content{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+    min-height: 0;
+  }
+
+  h1{
+    font-family: var(--display);
+    font-weight: 400;
+    font-style: normal;
+    font-size: clamp(30px, 8.2vw, 40px);
+    line-height: 1.12;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .sub{
+    font-size: 15.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 34ch;
+  }
+
+  .actions{
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+  }
+
+  button{
+    font-family: var(--body-font);
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 999px;
+    padding: 15px 22px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: transform .15s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
+  }
+  button:active{ transform: scale(0.96); }
+  button:focus-visible{ outline: 2px solid var(--shadow); outline-offset: 3px; }
+
+  .btn-primary{
+    background: var(--sun);
+    color: #FBF6EF;
+    flex: 1.3;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary:disabled{
+    background: var(--line);
+    color: #8b8272;
+    cursor: not-allowed;
+  }
+  .btn-ghost{
+    background: transparent;
+    border-color: var(--line);
+    color: var(--ink-soft);
+    flex: 1;
+  }
+
+  /* small delight burst on a genuine "yes" tap — no coercion, just texture */
+  .btn-primary.pulse::after{
+    content:'';
+    position:absolute; inset:0;
+    background: radial-gradient(circle, rgba(255,255,255,0.55) 0%, transparent 60%);
+    animation: burst .55s ease-out;
+  }
+  @keyframes burst{ from{ opacity:1; transform: scale(0.2);} to{ opacity:0; transform: scale(2.2);} }
+
+  .footer-links{
+    text-align: center;
+    margin-top: 14px;
+  }
+  .link-quiet{
+    background: none; border: none; padding: 6px;
+    font-size: 13.5px; color: var(--ink-soft);
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+
+  .cards{ display:flex; flex-direction:column; gap:10px; }
+  .pickcard{
+    display:flex; align-items:center; gap:12px;
+    padding: 16px 16px;
+    border-radius: 16px;
+    border: 1.5px solid var(--line);
+    background: var(--paper-deep);
+    font-family: var(--body-font);
+    font-size: 16px;
+    color: var(--ink);
+    text-align:left;
+    cursor:pointer;
+  }
+  .pickcard .emoji{ font-size: 22px; }
+  .pickcard.selected{
+    border-color: var(--sun);
+    background: var(--sun-soft);
+  }
+
+  .field{ display:flex; flex-direction:column; gap:8px; }
+  .field label{
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--shadow);
+  }
+  input[type="date"], input[type="time"], input[type="text"]{
+    font-family: var(--body-font);
+    font-size: 16px;
+    padding: 14px 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--line);
+    background: var(--paper-deep);
+    color: var(--ink);
+    width: 100%;
+  }
+  input:focus-visible{ outline: 2px solid var(--shadow); outline-offset: 2px; }
+
+  .ticket{
+    border: 1.5px dashed var(--line);
+    border-radius: 16px;
+    padding: 18px;
+    background: var(--paper-deep);
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .ticket-row{
+    display:flex; justify-content:space-between; gap:12px;
+    font-size: 14.5px;
+  }
+  .ticket-row .k{ color: var(--ink-soft); font-family: var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; padding-top:2px;}
+  .ticket-row .v{ text-align:right; font-weight:500; }
+
+  .note{
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    text-align:center;
+    line-height:1.5;
+  }
+
+  .decline-wrap{
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="gnomon" aria-hidden="true"></div>
+
+<div class="stage">
+
+  <!-- 1 — açılış -->
+  <section class="screen active" data-screen="intro">
+    <div class="eyebrow"><span>01 · 05</span><span>bugün, öğle arası</span></div>
+    <div class="content">
+      <h1>Seninle tanışmak istiyorum.</h1>
+      <p class="sub">Bunu yazacak cesareti ancak burada bulabildim. Bir şans verir misin?</p>
+      <div class="actions">
+        <button class="btn-ghost" id="btnNo" type="button">Hayır, sağ ol</button>
+        <button class="btn-primary" id="btnYes" type="button">Evet, olur</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1b — nazik çıkış -->
+  <section class="screen decline-wrap" data-screen="decline">
+    <div class="content decline-wrap">
+      <h1>Anladım.</h1>
+      <p class="sub">Vaktini aldığım için teşekkür ederim. İyi günler dilerim.</p>
+    </div>
+  </section>
+
+  <!-- 2 — tür seçimi -->
+  <section class="screen" data-screen="type">
+    <div class="eyebrow"><span>02 · 05</span><span>seçim</span></div>
+    <div class="content">
+      <h1>Ne dersin?</h1>
+      <p class="sub">Hangisi sana daha keyifli gelir?</p>
+      <div class="cards" id="typeCards">
+        <button class="pickcard" data-value="Kahve" type="button"><span class="emoji">☕</span>Kahve</button>
+        <button class="pickcard" data-value="Yemek" type="button"><span class="emoji">🍽️</span>Yemek</button>
+        <button class="pickcard" data-value="Yürüyüş" type="button"><span class="emoji">🚶</span>Yürüyüş</button>
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" data-back type="button">Geri</button>
+        <button class="btn-primary" id="btnTypeNext" type="button" disabled>Devam et</button>
+      </div>
+      <div class="footer-links"><button class="link-quiet" data-decline type="button">Vazgeçtim, gerek yok</button></div>
+    </div>
+  </section>
+
+  <!-- 3 — tarih / saat -->
+  <section class="screen" data-screen="datetime">
+    <div class="eyebrow"><span>03 · 05</span><span>zaman</span></div>
+    <div class="content">
+      <h1>Ne zaman uygun olur?</h1>
+      <p class="sub">Sana en rahat gelen günü ve saati seç.</p>
+      <div class="field">
+        <label for="inpDate">Gün</label>
+        <input type="date" id="inpDate">
+      </div>
+      <div class="field">
+        <label for="inpTime">Saat</label>
+        <input type="time" id="inpTime">
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" data-back type="button">Geri</button>
+        <button class="btn-primary" id="btnDateNext" type="button" disabled>Devam et</button>
+      </div>
+      <div class="footer-links"><button class="link-quiet" data-decline type="button">Vazgeçtim, gerek yok</button></div>
+    </div>
+  </section>
+
+  <!-- 4 — iletişim -->
+  <section class="screen" data-screen="contact">
+    <div class="eyebrow"><span>04 · 05</span><span>iletişim</span></div>
+    <div class="content">
+      <h1>Sana nasıl ulaşabilirim?</h1>
+      <p class="sub">İstersen bu adımı boş bırakabilirsin, sorun değil.</p>
+      <div class="field">
+        <label for="inpContact">Telefon, Instagram, ne istersen</label>
+        <input type="text" id="inpContact" placeholder="isteğe bağlı">
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" data-back type="button">Geri</button>
+        <button class="btn-primary" id="btnContactNext" type="button">Devam et</button>
+      </div>
+      <div class="footer-links"><button class="link-quiet" data-decline type="button">Vazgeçtim, gerek yok</button></div>
+    </div>
+  </section>
+
+  <!-- 5 — özet / gönder -->
+  <section class="screen" data-screen="summary">
+    <div class="eyebrow"><span>05 · 05</span><span>hazır</span></div>
+    <div class="content">
+      <h1>Hazır.</h1>
+      <div class="ticket" id="ticketBox">
+        <div class="ticket-row"><span class="k">Ne</span><span class="v" id="sumType">—</span></div>
+        <div class="ticket-row"><span class="k">Gün</span><span class="v" id="sumDate">—</span></div>
+        <div class="ticket-row"><span class="k">Saat</span><span class="v" id="sumTime">—</span></div>
+        <div class="ticket-row"><span class="k">İletişim</span><span class="v" id="sumContact">—</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" id="btnCopy" type="button">Mesajı kopyala</button>
+        <button class="btn-primary" id="btnSend" type="button">WhatsApp'ta gönder</button>
+      </div>
+      <p class="note">Göndermeden önce mesajı WhatsApp içinde düzenleyebilir ya da vazgeçebilirsin. Karar tamamen sende.</p>
+      <div class="footer-links"><button class="link-quiet" data-back type="button">Geri dön</button></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  // ↓ Kendi WhatsApp numaranı ülke koduyla (başında + olmadan) buraya yaz, örn: "905551234567"
+  const CONFIG = { whatsappNumber: "90XXXXXXXXXX" };
+
+  const state = { type: null, date: null, time: null, contact: '' };
+  const order = ['intro','type','datetime','contact','summary'];
+  const screens = Object.fromEntries(
+    [...document.querySelectorAll('.screen')].map(s => [s.dataset.screen, s])
+  );
+
+  function show(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  function back(){
+    const current = document.querySelector('.screen.active').dataset.screen;
+    const idx = order.indexOf(current);
+    if (idx > 0) show(order[idx - 1]);
+  }
+
+  document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', back));
+  document.querySelectorAll('[data-decline]').forEach(b => b.addEventListener('click', () => show('decline')));
+
+  // ekran 1
+  document.getElementById('btnNo').addEventListener('click', () => show('decline'));
+  document.getElementById('btnYes').addEventListener('click', (e) => {
+    e.currentTarget.classList.add('pulse');
+    setTimeout(() => show('type'), 260);
+  });
+
+  // ekran 2 — tür seçimi
+  const typeCards = document.querySelectorAll('#typeCards .pickcard');
+  const btnTypeNext = document.getElementById('btnTypeNext');
+  typeCards.forEach(card => card.addEventListener('click', () => {
+    typeCards.forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    state.type = card.dataset.value;
+    btnTypeNext.disabled = false;
+  }));
+  btnTypeNext.addEventListener('click', () => show('datetime'));
+
+  // ekran 3 — tarih/saat
+  const inpDate = document.getElementById('inpDate');
+  const inpTime = document.getElementById('inpTime');
+  const btnDateNext = document.getElementById('btnDateNext');
+  const today = new Date().toISOString().split('T')[0];
+  inpDate.min = today;
+  function checkDateTime(){ btnDateNext.disabled = !(inpDate.value && inpTime.value); }
+  inpDate.addEventListener('input', checkDateTime);
+  inpTime.addEventListener('input', checkDateTime);
+  btnDateNext.addEventListener('click', () => {
+    state.date = inpDate.value;
+    state.time = inpTime.value;
+    show('contact');
+  });
+
+  // ekran 4 — iletişim (opsiyonel)
+  const inpContact = document.getElementById('inpContact');
+  document.getElementById('btnContactNext').addEventListener('click', () => {
+    state.contact = inpContact.value.trim();
+    fillSummary();
+    show('summary');
+  });
+
+  // ekran 5 — özet
+  function formatDate(iso){
+    if (!iso) return '—';
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('tr-TR', { day:'numeric', month:'long', weekday:'long' });
+  }
+  function fillSummary(){
+    document.getElementById('sumType').textContent = state.type || '—';
+    document.getElementById('sumDate').textContent = formatDate(state.date);
+    document.getElementById('sumTime').textContent = state.time || '—';
+    document.getElementById('sumContact').textContent = state.contact || 'paylaşılmadı';
+  }
+  function buildMessage(){
+    let msg = `Merhaba! Bugün öğle arası karşılaştığımız kişiyim. `;
+    msg += `${state.type || 'Buluşmak'} için ${formatDate(state.date)}, saat ${state.time || '—'} bana uyar.`;
+    if (state.contact) msg += ` Bana buradan ulaşabilirsin: ${state.contact}`;
+    return msg;
+  }
+  document.getElementById('btnSend').addEventListener('click', () => {
+    const text = encodeURIComponent(buildMessage());
+    window.location.href = `https://wa.me/${CONFIG.whatsappNumber}?text=${text}`;
+  });
+  document.getElementById('btnCopy').addEventListener('click', async (e) => {
+    try{
+      await navigator.clipboard.writeText(buildMessage());
+      const btn = e.currentTarget;
+      const old = btn.textContent;
+      btn.textContent = 'Kopyalandı ✓';
+      setTimeout(() => btn.textContent = old, 1500);
+    }catch(err){ /* sessizce yut, kritik değil */ }
+  });
+</script>
+
+</body>
+</html>
